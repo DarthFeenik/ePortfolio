@@ -11,11 +11,21 @@
 #  $over - int 1000, the chosen number to compare to processes. Anything over 1000 should get listed. 
 #  need an if statement to find if $CPUHOG is greater than or equal to $over
 
-
-$CPUHOG = Get-Process | sort cpu -desc | where cpu -ge $over
-$over = 1000
-
-if ($CPUHOG.cpu -ge $over) {echo "CPU is over NINE THOUSAND!" $CPUHOG
+function CPUHog
+{
+	# Need to calc the total number of cores for the CPU
+	$CPUNum = (Get-CIMInstance -class Win32_processor | Measure-Object -Sum NumberOfLogicalProcessors).Sum
+	
+	#Need to see what processes are using the CPU and calculate if their use is too high
+	$CPUCount =  (Get-Counter "\Process(*)\% Processor Time").CounterSamples | Where-Object {$_.InstanceName -NotLike "_total" -and $_.InstanceName -NotLike "idle"} | Where-Object {$_.CookedValue / $CPUNum  -gt 5} | Select InstanceName, CookedValue 
+		
+		#Divides the processes use by the number of cores and lists the top processes that are hogging the cpu
+		foreach($_ in $CPUCount)
+		{
+			Write-Host $_.InstanceName, ($_.CookedValue / $CPUNum) | Out-File -FilePath \CPUHog.txt
+		}
+	
+	}
 
 
 
@@ -33,11 +43,19 @@ if ($CPUHOG.cpu -ge $over) {echo "CPU is over NINE THOUSAND!" $CPUHOG
 #  To check all the status' I will store their data in variables and call on them to compare if they are true or false
 
 
-$service = Get-MpComputerStatus | Select-Object -Property AMServiceEnabled
-$spyware = Get-MpComputerStatus | Select-Object -Property AntispywareEnabled
-$virus = Get-MpComputerStatus | Select-Object -Property AntivirusEnabled
+#$service = Get-MpComputerStatus | Select-Object -Property AMServiceEnabled
+#$spyware = Get-MpComputerStatus | Select-Object -Property AntispywareEnabled
+#$virus = Get-MpComputerStatus | Select-Object -Property AntivirusEnabled
 
-
+function DefenderEnabled
+{
+	#Check if the AM Service is enabled or enable = true, if not it will display an error
+	if ((Get-MPComputerStatus).AMServiceEnabled -eq 1)
+	{
+		Write-Host "AMService is Disabled!"
+	}
+	
+}
 
 
 
